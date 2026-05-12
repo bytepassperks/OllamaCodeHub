@@ -14,7 +14,7 @@ async function main() {
     update: { role: "ADMIN", passwordHash },
     create: {
       email: adminEmail,
-      clerkId: "admin_seeded",
+      name: "Admin",
       role: "ADMIN",
       passwordHash,
     },

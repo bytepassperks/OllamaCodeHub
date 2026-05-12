@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useAuth, UserButton } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { apiClient, streamChat } from "@/lib/api";
+import { getToken, getUser, clearAuth, isAdmin } from "@/lib/auth";
 
 interface Message {
   role: "user" | "assistant";
@@ -26,7 +27,7 @@ interface QueryRecord {
 type TabType = "chat" | "history";
 
 export default function DashboardPage() {
-  const { getToken } = useAuth();
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [model, setModel] = useState("qwen3-coder:30b");
@@ -35,10 +36,15 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<TabType>("chat");
   const [history, setHistory] = useState<QueryRecord[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const user = getUser();
+
+  useEffect(() => {
+    if (!getToken()) router.push("/login");
+  }, [router]);
 
   const fetchModels = useCallback(async () => {
     try {
-      const token = await getToken();
+      const token = getToken();
       if (!token) return;
       const data = await apiClient("/v1/models", { token });
       setModels(data.data || []);
@@ -47,18 +53,18 @@ export default function DashboardPage() {
     } catch {
       /* fallback to default */
     }
-  }, [getToken]);
+  }, []);
 
   const fetchHistory = useCallback(async () => {
     try {
-      const token = await getToken();
+      const token = getToken();
       if (!token) return;
       const data = await apiClient("/v1/history?limit=50", { token });
       setHistory(data.queries || []);
     } catch {
       /* ignore */
     }
-  }, [getToken]);
+  }, []);
 
   useEffect(() => {
     fetchModels();
@@ -74,7 +80,7 @@ export default function DashboardPage() {
 
   const sendMessage = async () => {
     if (!input.trim() || isStreaming) return;
-    const token = await getToken();
+    const token = getToken();
     if (!token) return;
 
     const userMsg: Message = { role: "user", content: input };
@@ -117,6 +123,11 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleLogout = () => {
+    clearAuth();
+    router.push("/");
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -149,6 +160,13 @@ export default function DashboardPage() {
                   VS Code Setup
                 </Button>
               </Link>
+              {isAdmin() && (
+                <Link href="/admin">
+                  <Button variant="ghost" size="sm">
+                    Admin
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -170,7 +188,10 @@ export default function DashboardPage() {
                 </>
               )}
             </select>
-            <UserButton afterSignOutUrl="/" />
+            <span className="text-sm text-muted-foreground">{user?.email}</span>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Logout
+            </Button>
           </div>
         </div>
       </header>

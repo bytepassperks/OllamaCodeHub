@@ -1,22 +1,27 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
+import { getToken } from "@/lib/auth";
 
 export default function VSCodeSetupPage() {
-  const { getToken } = useAuth();
+  const router = useRouter();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [config, setConfig] = useState<any>(null);
   const [instructions, setInstructions] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    if (!getToken()) router.push("/login");
+  }, [router]);
+
   const fetchConfig = useCallback(async () => {
     try {
-      const token = await getToken();
+      const token = getToken();
       if (!token) return;
       const data = await apiClient("/vscode/config", { token });
       setConfig(data.config);
@@ -24,7 +29,7 @@ export default function VSCodeSetupPage() {
     } catch {
       /* user not logged in or API down */
     }
-  }, [getToken]);
+  }, []);
 
   useEffect(() => {
     fetchConfig();
@@ -93,11 +98,8 @@ export default function VSCodeSetupPage() {
               <p className="text-muted-foreground">
                 Open Continue settings:{" "}
                 <code className="bg-secondary px-1.5 py-0.5 rounded text-sm">
-                  Ctrl+Shift+P → Continue: Open config.json
+                  Ctrl+Shift+P &rarr; Continue: Open config.json
                 </code>
-              </p>
-              <p className="text-muted-foreground">
-                Replace the contents with this config:
               </p>
               <div className="relative">
                 <pre className="bg-secondary p-4 rounded-lg text-sm overflow-x-auto">
@@ -127,15 +129,15 @@ export default function VSCodeSetupPage() {
               <p className="text-muted-foreground">
                 Replace{" "}
                 <code className="bg-secondary px-1.5 py-0.5 rounded text-sm">
-                  your-clerk-jwt-token
+                  your-jwt-token
                 </code>{" "}
-                in the config with your JWT token from the dashboard.
+                in the config with your JWT token from login.
               </p>
               <p className="text-muted-foreground">
-                You can get your token from the browser developer tools:
+                You can find your token in localStorage after logging in:
               </p>
               <pre className="bg-secondary p-3 rounded-lg text-sm">
-                {`// In browser console on the dashboard page:\nawait window.Clerk.session.getToken()`}
+                {`// In browser console on the dashboard page:\nlocalStorage.getItem('ollamacodehub_token')`}
               </pre>
             </CardContent>
           </Card>

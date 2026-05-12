@@ -1,12 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { SignedIn, SignedOut } from "@clerk/nextjs";
+import { useEffect, useState } from "react";
+import { getToken } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default function LandingPage() {
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setLoggedIn(!!getToken());
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/20">
       {/* Nav */}
@@ -19,19 +26,20 @@ export default function LandingPage() {
             <span className="font-bold text-lg">OllamaCodeHub</span>
           </div>
           <div className="flex items-center gap-4">
-            <SignedOut>
-              <Link href="/sign-in">
-                <Button variant="ghost">Sign In</Button>
-              </Link>
-              <Link href="/sign-up">
-                <Button>Get Started</Button>
-              </Link>
-            </SignedOut>
-            <SignedIn>
+            {!loggedIn ? (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost">Sign In</Button>
+                </Link>
+                <Link href="/signup">
+                  <Button>Get Started</Button>
+                </Link>
+              </>
+            ) : (
               <Link href="/dashboard">
                 <Button>Dashboard</Button>
               </Link>
-            </SignedIn>
+            )}
           </div>
         </div>
       </nav>
@@ -52,7 +60,7 @@ export default function LandingPage() {
           fraction of the cost.
         </p>
         <div className="flex gap-4 justify-center">
-          <Link href="/sign-up">
+          <Link href="/signup">
             <Button size="lg" className="text-lg px-8">
               Start Free — 100 queries/day
             </Button>
@@ -72,36 +80,12 @@ export default function LandingPage() {
         </h2>
         <div className="grid md:grid-cols-3 gap-6">
           {[
-            {
-              title: "Code Generation",
-              desc: "Generate code, debug issues, and get explanations — all from a chat UI or directly in VS Code.",
-              icon: "{ }",
-            },
-            {
-              title: "VS Code Integration",
-              desc: "One-click Continue config. Get autocomplete, inline chat, and code actions right in your editor.",
-              icon: "</>",
-            },
-            {
-              title: "Private & Fast",
-              desc: "Your code never leaves the server. Qwen3-Coder 30B runs locally via Ollama with sub-second responses.",
-              icon: "🔒",
-            },
-            {
-              title: "Model Selection",
-              desc: "Choose between Qwen3-Coder 30B (best quality) and CodeLlama 13B (fastest) based on your needs.",
-              icon: "🤖",
-            },
-            {
-              title: "Query History",
-              desc: "Full history of all your prompts and responses. Export code snippets with one click.",
-              icon: "📋",
-            },
-            {
-              title: "Pro Plan — $9/mo",
-              desc: "Unlimited queries, priority inference, and early access to new models. Free tier: 100 queries/day.",
-              icon: "⚡",
-            },
+            { title: "Code Generation", desc: "Generate code, debug issues, and get explanations — all from a chat UI or directly in VS Code.", icon: "{ }" },
+            { title: "VS Code Integration", desc: "One-click Continue config. Get autocomplete, inline chat, and code actions right in your editor.", icon: "</>" },
+            { title: "Private & Fast", desc: "Your code never leaves the server. Qwen3-Coder 30B runs locally via Ollama with sub-second responses.", icon: "🔒" },
+            { title: "Model Selection", desc: "Choose between Qwen3-Coder 30B (best quality) and CodeLlama 13B (fastest) based on your needs.", icon: "🤖" },
+            { title: "Query History", desc: "Full history of all your prompts and responses. Export code snippets with one click.", icon: "📋" },
+            { title: "Admin Controls", desc: "Full admin panel: manage users, models, analytics, and API logs. Admin generates passwords for users.", icon: "⚡" },
           ].map((f) => (
             <Card key={f.title}>
               <CardHeader>
@@ -113,57 +97,6 @@ export default function LandingPage() {
               </CardContent>
             </Card>
           ))}
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section className="max-w-4xl mx-auto px-4 py-16">
-        <h2 className="text-3xl font-bold text-center mb-12">Simple Pricing</h2>
-        <div className="grid md:grid-cols-2 gap-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">Free</CardTitle>
-              <p className="text-4xl font-bold">
-                $0<span className="text-lg text-muted-foreground">/mo</span>
-              </p>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-muted-foreground">
-                <li>100 queries per day</li>
-                <li>Qwen3-Coder 30B + CodeLlama</li>
-                <li>VS Code integration</li>
-                <li>Query history & export</li>
-              </ul>
-              <Link href="/sign-up">
-                <Button variant="outline" className="w-full mt-6">
-                  Get Started Free
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          <Card className="border-primary">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-2xl">Pro</CardTitle>
-                <Badge>Popular</Badge>
-              </div>
-              <p className="text-4xl font-bold">
-                $9<span className="text-lg text-muted-foreground">/mo</span>
-              </p>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-muted-foreground">
-                <li>Unlimited queries</li>
-                <li>Priority inference</li>
-                <li>All models</li>
-                <li>Early access to new models</li>
-                <li>Priority support</li>
-              </ul>
-              <Link href="/sign-up">
-                <Button className="w-full mt-6">Upgrade to Pro</Button>
-              </Link>
-            </CardContent>
-          </Card>
         </div>
       </section>
 

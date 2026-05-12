@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useAuth, UserButton } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { apiClient } from "@/lib/api";
+import { getToken, getUser, clearAuth, isAdmin } from "@/lib/auth";
 
-type AdminTab = "overview" | "users" | "queries" | "models" | "subscriptions" | "logs";
+type AdminTab = "overview" | "users" | "queries" | "models" | "logs";
 
 interface AnalyticsData {
   totalUsers: number;
@@ -28,7 +29,6 @@ interface UserRecord {
   queriesUsed: number;
   createdAt: string;
   _count: { queries: number };
-  subscription?: { plan: string; status: string } | null;
 }
 
 interface ModelRecord {
@@ -50,7 +50,7 @@ interface LogRecord {
 }
 
 export default function AdminPage() {
-  const { getToken } = useAuth();
+  const router = useRouter();
   const [tab, setTab] = useState<AdminTab>("overview");
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -58,12 +58,18 @@ export default function AdminPage() {
   const [logs, setLogs] = useState<LogRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserRole, setNewUserRole] = useState("USER");
+  const user = getUser();
 
-  const token = useCallback(() => getToken(), [getToken]);
+  useEffect(() => {
+    if (!getToken() || !isAdmin()) router.push("/login");
+  }, [router]);
 
   const fetchData = useCallback(async () => {
     try {
-      const t = await token();
+      const t = getToken();
       if (!t) return;
 
       if (tab === "overview") {
@@ -86,14 +92,14 @@ export default function AdminPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     }
-  }, [tab, searchQuery, token]);
+  }, [tab, searchQuery]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const updateUserRole = async (userId: string, role: string) => {
-    const t = await token();
+    const t = getToken();
     if (!t) return;
     await apiClient(`/admin/users/${userId}/role`, {
       token: t,
@@ -104,7 +110,7 @@ export default function AdminPage() {
   };
 
   const toggleBan = async (userId: string, banned: boolean) => {
-    const t = await token();
+    const t = getToken();
     if (!t) return;
     await apiClient(`/admin/users/${userId}/ban`, {
       token: t,
@@ -114,24 +120,58 @@ export default function AdminPage() {
     fetchData();
   };
 
-  const setDefaultModel = async (modelId: string) => {
-    const t = await token();
+  const resetPassword = async (userId: string) => {
+    const password = prompt("Enter new password for this user (min 8 chars):");
+    if (!password || password.length < 8) return;
+    const t = getToken();
     if (!t) return;
-    await apiClient(`/admin/models/${modelId}/default`, {
+    await apiClient(`/admin/users/${userId}/password`, {
       token: t,
-      method: "PATCH",
+      method: "POST",
+      body: JSON.stringify({ password }),
     });
+    alert("Password updated!");
+  };
+
+  const createUser = async () => {
+    if (!newUserEmail || !newUserPassword) return;
+    const t = getToken();
+    if (!t) return;
+    try {
+      await apiClient("/admin/users/create", {
+        token: t,
+        method: "POST",
+        body: JSON.stringify({
+          email: newUserEmail,
+          password: newUserPassword,
+          role: newUserRole,
+        }),
+      });
+      setNewUserEmail("");
+      setNewUserPassword("");
+      fetchData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to create user");
+    }
+  };
+
+  const setDefaultModel = async (modelId: string) => {
+    const t = getToken();
+    if (!t) return;
+    await apiClient(`/admin/models/${modelId}/default`, { token: t, method: "PATCH" });
     fetchData();
   };
 
   const deleteModelHandler = async (modelId: string) => {
-    const t = await token();
+    const t = getToken();
     if (!t) return;
-    await apiClient(`/admin/models/${modelId}`, {
-      token: t,
-      method: "DELETE",
-    });
+    await apiClient(`/admin/models/${modelId}`, { token: t, method: "DELETE" });
     fetchData();
+  };
+
+  const handleLogout = () => {
+    clearAuth();
+    router.push("/");
   };
 
   const tabs: { key: AdminTab; label: string }[] = [
@@ -139,7 +179,6 @@ export default function AdminPage() {
     { key: "users", label: "Users" },
     { key: "queries", label: "Queries" },
     { key: "models", label: "Models" },
-    { key: "subscriptions", label: "Subscriptions" },
     { key: "logs", label: "API Logs" },
   ];
 
@@ -167,7 +206,12 @@ export default function AdminPage() {
               ))}
             </div>
           </div>
-          <UserButton afterSignOutUrl="/" />
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">{user?.email}</span>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -206,6 +250,49 @@ export default function AdminPage() {
         {/* Users */}
         {tab === "users" && (
           <div className="space-y-4">
+            {/* Create User Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Create New User</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 items-end">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Email</label>
+                    <Input
+                      value={newUserEmail}
+                      onChange={(e) => setNewUserEmail(e.target.value)}
+                      placeholder="user@example.com"
+                      className="w-60"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Password</label>
+                    <Input
+                      type="password"
+                      value={newUserPassword}
+                      onChange={(e) => setNewUserPassword(e.target.value)}
+                      placeholder="Min 8 chars"
+                      className="w-40"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Role</label>
+                    <select
+                      value={newUserRole}
+                      onChange={(e) => setNewUserRole(e.target.value)}
+                      className="bg-secondary rounded-md px-3 py-2 text-sm border border-input block"
+                    >
+                      <option value="USER">USER</option>
+                      <option value="PRO">PRO</option>
+                      <option value="ADMIN">ADMIN</option>
+                    </select>
+                  </div>
+                  <Button onClick={createUser}>Create</Button>
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="flex gap-2">
               <Input
                 placeholder="Search by email..."
@@ -222,7 +309,6 @@ export default function AdminPage() {
                     <th className="text-left p-3">Email</th>
                     <th className="text-left p-3">Role</th>
                     <th className="text-left p-3">Queries</th>
-                    <th className="text-left p-3">Plan</th>
                     <th className="text-left p-3">Status</th>
                     <th className="text-left p-3">Actions</th>
                   </tr>
@@ -244,24 +330,26 @@ export default function AdminPage() {
                       </td>
                       <td className="p-3">{u._count.queries}</td>
                       <td className="p-3">
-                        <Badge variant="secondary">
-                          {u.subscription?.plan || "free"}
-                        </Badge>
-                      </td>
-                      <td className="p-3">
                         {u.banned ? (
                           <Badge variant="destructive">Banned</Badge>
                         ) : (
                           <Badge variant="secondary">Active</Badge>
                         )}
                       </td>
-                      <td className="p-3">
+                      <td className="p-3 space-x-2">
                         <Button
                           size="sm"
                           variant={u.banned ? "outline" : "destructive"}
                           onClick={() => toggleBan(u.id, !u.banned)}
                         >
                           {u.banned ? "Unban" : "Ban"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => resetPassword(u.id)}
+                        >
+                          Reset PW
                         </Button>
                       </td>
                     </tr>
@@ -289,19 +377,11 @@ export default function AdminPage() {
                   <CardContent>
                     <div className="flex gap-2">
                       {!m.isDefault && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setDefaultModel(m.id)}
-                        >
+                        <Button size="sm" variant="outline" onClick={() => setDefaultModel(m.id)}>
                           Set Default
                         </Button>
                       )}
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deleteModelHandler(m.id)}
-                      >
+                      <Button size="sm" variant="destructive" onClick={() => deleteModelHandler(m.id)}>
                         Remove
                       </Button>
                     </div>
@@ -309,6 +389,13 @@ export default function AdminPage() {
                 </Card>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Queries */}
+        {tab === "queries" && (
+          <div className="text-muted-foreground">
+            <p>Query browser — see the Overview tab for aggregate stats, or use the Users tab to view per-user queries.</p>
           </div>
         )}
 
@@ -337,9 +424,7 @@ export default function AdminPage() {
                     </td>
                     <td className="p-3 font-mono text-xs">{log.path}</td>
                     <td className="p-3">
-                      <Badge
-                        variant={log.statusCode < 400 ? "secondary" : "destructive"}
-                      >
+                      <Badge variant={log.statusCode < 400 ? "secondary" : "destructive"}>
                         {log.statusCode}
                       </Badge>
                     </td>
@@ -349,21 +434,6 @@ export default function AdminPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-
-        {/* Queries tab reuses overview for now */}
-        {tab === "queries" && (
-          <div className="text-muted-foreground">
-            <p>Query browser — see the Overview tab for aggregate stats, or use the Users tab to view per-user queries.</p>
-          </div>
-        )}
-
-        {/* Subscriptions */}
-        {tab === "subscriptions" && (
-          <div className="text-muted-foreground">
-            <p>Subscription management is handled via Stripe&apos;s dashboard. Users can manage billing from their dashboard.</p>
-            <p className="mt-2">Use the Users tab to upgrade/downgrade user roles directly.</p>
           </div>
         )}
       </main>

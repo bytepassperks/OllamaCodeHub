@@ -2,12 +2,13 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import helmet from "@fastify/helmet";
+import cookie from "@fastify/cookie";
 import { config } from "./config/env.js";
 import prisma from "./config/database.js";
 
+import authRoutes from "./routes/auth.js";
 import chatRoutes from "./routes/chat.js";
 import adminRoutes from "./routes/admin.js";
-import stripeRoutes from "./routes/stripe.js";
 import vscodeRoutes from "./routes/vscode.js";
 import healthRoutes from "./routes/health.js";
 
@@ -22,6 +23,7 @@ await fastify.register(cors, {
 });
 
 await fastify.register(helmet, { contentSecurityPolicy: false });
+await fastify.register(cookie);
 
 await fastify.register(rateLimit, {
   max: 200,
@@ -48,9 +50,9 @@ fastify.addHook("onResponse", async (request, reply) => {
 });
 
 await fastify.register(healthRoutes);
+await fastify.register(authRoutes);
 await fastify.register(chatRoutes);
 await fastify.register(adminRoutes);
-await fastify.register(stripeRoutes);
 await fastify.register(vscodeRoutes);
 
 const start = async () => {

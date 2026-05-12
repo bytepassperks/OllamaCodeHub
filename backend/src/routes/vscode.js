@@ -17,7 +17,7 @@ export default async function vscodeRoutes(fastify) {
             provider: "openai",
             model: "qwen3-coder:30b",
             apiBase: `${backendUrl}/v1`,
-            apiKey: "your-clerk-jwt-token",
+            apiKey: "your-jwt-token",
             contextLength: 32768,
           },
           {
@@ -25,7 +25,7 @@ export default async function vscodeRoutes(fastify) {
             provider: "openai",
             model: "codellama:13b",
             apiBase: `${backendUrl}/v1`,
-            apiKey: "your-clerk-jwt-token",
+            apiKey: "your-jwt-token",
             contextLength: 16384,
           },
         ],
@@ -34,7 +34,7 @@ export default async function vscodeRoutes(fastify) {
           provider: "openai",
           model: "qwen3-coder:30b",
           apiBase: `${backendUrl}/v1`,
-          apiKey: "your-clerk-jwt-token",
+          apiKey: "your-jwt-token",
         },
       };
 
@@ -44,7 +44,7 @@ export default async function vscodeRoutes(fastify) {
           "1. Install the 'Continue' extension in VS Code.",
           "2. Open Continue settings (Ctrl+Shift+P → 'Continue: Open config.json').",
           "3. Replace the contents with the config above.",
-          "4. Replace 'your-clerk-jwt-token' with your API token from the dashboard.",
+          "4. Replace 'your-jwt-token' with your token from: localStorage.getItem('ollamacodehub_token')",
           "5. Start coding with AI-powered autocomplete and chat!",
         ],
       };

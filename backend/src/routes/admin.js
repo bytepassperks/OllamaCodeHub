@@ -1,6 +1,5 @@
 import { authenticateUser, requireAdmin } from "../middleware/auth.js";
 import { pullModel, deleteModel, listModels } from "../services/ollama.js";
-import { cancelSubscription } from "../services/stripe.js";
 import prisma from "../config/database.js";
 
 export default async function adminRoutes(fastify) {
@@ -19,7 +18,7 @@ export default async function adminRoutes(fastify) {
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
-        include: { subscription: true, _count: { select: { queries: true } } },
+        include: { _count: { select: { queries: true } } },
         orderBy: { createdAt: "desc" },
         take: parseInt(limit),
         skip,
@@ -27,7 +26,15 @@ export default async function adminRoutes(fastify) {
       prisma.user.count({ where }),
     ]);
 
-    return { users, total, page: parseInt(page), limit: parseInt(limit) };
+    return {
+      users: users.map((u) => ({
+        ...u,
+        passwordHash: undefined,
+      })),
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+    };
   });
 
   fastify.patch("/admin/users/:userId/role", async (request, reply) => {
@@ -40,54 +47,19 @@ export default async function adminRoutes(fastify) {
       where: { id: request.params.userId },
       data: { role },
     });
-    return user;
+    return { id: user.id, email: user.email, role: user.role };
   });
 
   fastify.patch("/admin/users/:userId/ban", async (request) => {
     const { banned, suspendedUntil } = request.body;
-    return prisma.user.update({
+    const user = await prisma.user.update({
       where: { id: request.params.userId },
       data: {
         banned: banned ?? false,
         suspendedUntil: suspendedUntil ? new Date(suspendedUntil) : null,
       },
     });
-  });
-
-  // ─── Subscriptions ────────────────────────────────────
-  fastify.get("/admin/subscriptions", async () => {
-    return prisma.subscription.findMany({
-      include: { user: { select: { email: true, role: true } } },
-      orderBy: { createdAt: "desc" },
-    });
-  });
-
-  fastify.patch("/admin/subscriptions/:subId", async (request) => {
-    const { plan, status } = request.body;
-    return prisma.subscription.update({
-      where: { id: request.params.subId },
-      data: { ...(plan && { plan }), ...(status && { status }) },
-    });
-  });
-
-  fastify.post("/admin/subscriptions/:subId/cancel", async (request, reply) => {
-    const sub = await prisma.subscription.findUnique({
-      where: { id: request.params.subId },
-    });
-    if (!sub) return reply.code(404).send({ error: "Subscription not found" });
-
-    if (sub.stripeSubId) {
-      try {
-        await cancelSubscription(sub.stripeSubId);
-      } catch (err) {
-        request.log.error(err);
-      }
-    }
-
-    return prisma.subscription.update({
-      where: { id: sub.id },
-      data: { status: "CANCELED", plan: "free" },
-    });
+    return { id: user.id, email: user.email, banned: user.banned };
   });
 
   // ─── Queries / Analytics ──────────────────────────────

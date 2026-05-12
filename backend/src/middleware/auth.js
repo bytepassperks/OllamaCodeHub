@@ -1,8 +1,18 @@
-import { createClerkClient } from "@clerk/backend";
+import jwt from "jsonwebtoken";
 import { config } from "../config/env.js";
 import prisma from "../config/database.js";
 
-const clerk = createClerkClient({ secretKey: config.clerkSecretKey });
+export function signToken(user) {
+  return jwt.sign(
+    { id: user.id, email: user.email, role: user.role },
+    config.jwtSecret,
+    { expiresIn: "7d" }
+  );
+}
+
+export function verifyToken(token) {
+  return jwt.verify(token, config.jwtSecret);
+}
 
 export async function authenticateUser(request, reply) {
   try {
@@ -12,30 +22,16 @@ export async function authenticateUser(request, reply) {
     }
 
     const token = authHeader.replace("Bearer ", "");
-
-    let clerkUser;
+    let decoded;
     try {
-      const decoded = await clerk.verifyToken(token);
-      clerkUser = await clerk.users.getUser(decoded.sub);
+      decoded = verifyToken(token);
     } catch {
-      return reply.code(401).send({ error: "Invalid token" });
+      return reply.code(401).send({ error: "Invalid or expired token" });
     }
 
-    const email = clerkUser.emailAddresses[0]?.emailAddress;
-    if (!email) {
-      return reply.code(401).send({ error: "No email found" });
-    }
-
-    let user = await prisma.user.findUnique({ where: { clerkId: clerkUser.id } });
-
+    const user = await prisma.user.findUnique({ where: { id: decoded.id } });
     if (!user) {
-      user = await prisma.user.create({
-        data: {
-          clerkId: clerkUser.id,
-          email,
-          role: email === config.adminEmail ? "ADMIN" : "USER",
-        },
-      });
+      return reply.code(401).send({ error: "User not found" });
     }
 
     if (user.banned) {
@@ -78,7 +74,7 @@ export async function checkQueryLimit(request, reply) {
 
   if (user.queriesUsed >= config.freeQueryLimit) {
     return reply.code(429).send({
-      error: "Daily query limit reached. Upgrade to Pro for unlimited queries.",
+      error: "Daily query limit reached. Contact admin to upgrade to Pro.",
       queriesUsed: user.queriesUsed,
       limit: config.freeQueryLimit,
     });
