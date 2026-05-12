@@ -1,12 +1,7 @@
 [build]
-dockerfilePath = "ollama/Dockerfile"
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "/entrypoint.sh"
-healthcheckPath = "/api/tags"
-healthcheckTimeout = 300
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 5
-
-[[volumes]]
-mountPath = "/root/.ollama"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
