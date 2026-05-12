@@ -11,15 +11,11 @@ until curl -s http://localhost:11434/api/tags > /dev/null 2>&1; do
 done
 echo "Ollama server ready."
 
-# Pull the primary model
-echo "Pulling qwen3-coder:30b..."
-ollama pull qwen3-coder:30b || echo "Warning: Failed to pull qwen3-coder:30b"
+# Pull the model (Claude 4.7 Opus distilled, MoE 35B/3B active, 23GB APEX quantized)
+echo "Pulling yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality..."
+ollama pull yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality || echo "Warning: Failed to pull model"
 
-# Pull fallback model
-echo "Pulling codellama:13b..."
-ollama pull codellama:13b || echo "Warning: Failed to pull codellama:13b"
-
-echo "All models ready. Server running on :11434"
+echo "Model ready. Server running on :11434"
 
 # Keep the server in foreground
 wait

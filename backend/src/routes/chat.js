@@ -11,10 +11,12 @@ export default async function chatRoutes(fastify) {
       const user = request.user;
       const startTime = Date.now();
 
-      const selectedModel = model || "qwen3-coder:30b";
+      const defaultModel = await prisma.ollamaModel.findFirst({ where: { isDefault: true, isActive: true } });
+      const selectedModel = model || (defaultModel ? `${defaultModel.name}:${defaultModel.tag}` : "yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality:latest");
 
+      const modelName = selectedModel.includes(":") ? selectedModel.split(":").slice(0, -1).join(":") : selectedModel;
       const dbModel = await prisma.ollamaModel.findFirst({
-        where: { name: selectedModel.split(":")[0], isActive: true },
+        where: { name: modelName, isActive: true },
       });
       if (!dbModel) {
         return reply.code(400).send({ error: `Model "${selectedModel}" is not available` });

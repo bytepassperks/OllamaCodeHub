@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [model, setModel] = useState("qwen3-coder:30b");
+  const [model, setModel] = useState("yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality:latest");
   const [models, setModels] = useState<Array<{ id: string; isDefault: boolean }>>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [tab, setTab] = useState<TabType>("chat");
@@ -183,8 +183,7 @@ export default function DashboardPage() {
                 ))
               ) : (
                 <>
-                  <option value="qwen3-coder:30b">qwen3-coder:30b</option>
-                  <option value="codellama:13b">codellama:13b</option>
+                  <option value="yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality:latest">Qwen3.6-35B Claude Opus Distilled</option>
                 </>
               )}
             </select>

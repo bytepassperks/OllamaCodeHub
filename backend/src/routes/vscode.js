@@ -13,26 +13,18 @@ export default async function vscodeRoutes(fastify) {
       const continueConfig = {
         models: [
           {
-            title: "OllamaCodeHub — Qwen3-Coder 30B",
+            title: "OllamaCodeHub — Qwen3.6-35B Claude Opus Distilled",
             provider: "openai",
-            model: "qwen3-coder:30b",
+            model: "yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality:latest",
             apiBase: `${backendUrl}/v1`,
             apiKey: "your-jwt-token",
             contextLength: 32768,
-          },
-          {
-            title: "OllamaCodeHub — CodeLlama 13B",
-            provider: "openai",
-            model: "codellama:13b",
-            apiBase: `${backendUrl}/v1`,
-            apiKey: "your-jwt-token",
-            contextLength: 16384,
           },
         ],
         tabAutocompleteModel: {
           title: "OllamaCodeHub Autocomplete",
           provider: "openai",
-          model: "qwen3-coder:30b",
+          model: "yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality:latest",
           apiBase: `${backendUrl}/v1`,
           apiKey: "your-jwt-token",
         },

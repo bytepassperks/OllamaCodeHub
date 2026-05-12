@@ -2,37 +2,35 @@
 
 **Affordable SaaS for private Claude-like AI coding in VS Code — powered by Ollama.**
 
-> Inspired by the video [Run Claude Opus 4.7 Locally with Ollama + Connect Claude Opus 4.7 with VS Code For Coding](https://youtu.be/TLz0mZYgWSE). OllamaCodeHub brings enterprise-grade coding AI to your team at a fraction of the cost, with full privacy.
+> Inspired by [Run Claude Opus 4.7 Locally with Ollama + Connect with VS Code](https://youtu.be/TLz0mZYgWSE). OllamaCodeHub brings Claude Opus-grade coding AI to your team at a fraction of the cost, with full privacy.
 
 ---
 
-## Model Benchmarks & Selection
+## Model: Qwen3.6-35B Claude 4.7 Opus Distilled (APEX)
 
-### Primary Model: Qwen3-Coder 30B (MoE)
+**[yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality](https://ollama.com/yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality)**
 
-After benchmarking available Ollama models for coding/agent tasks (May 2026), **Qwen3-Coder 30B** was selected as the best local model closest to Claude Opus 4.7 for coding.
+| Spec | Value |
+|------|-------|
+| Architecture | Qwen 3.5 MoE — 35B total, ~3B active per token |
+| Size | 23GB (APEX I-Quality quantized) |
+| Context | 256K tokens |
+| Experts | 256 routed + shared experts, 40 layers |
+| Quantization | APEX (Adaptive Precision for Expert Models) with imatrix calibration |
+| Distilled From | Claude 4.7 Opus reasoning |
+| License | Apache-2.0 |
 
-| Model | HumanEval | SWE-Bench Verified | LiveCodeBench | VRAM (Q4) | Ollama Size |
-|-------|-----------|-------------------|---------------|-----------|-------------|
-| **Qwen3-Coder 30B** | 90%+ | Trained on SWE-Bench | Top-tier | 18GB | 19GB |
-| Qwen2.5-Coder 32B | 92.7% | N/A | Competitive | 22GB | 20GB |
-| DeepSeek-R1 32B | ~85% | N/A | 72.6% | 20GB | 20GB |
-| CodeLlama 13B (fallback) | ~62% | N/A | N/A | 8GB | 7.4GB |
+**Why this model?**
+- **Claude Opus reasoning distilled** — trained to replicate Claude 4.7 Opus reasoning patterns
+- **MoE efficiency** — 35B total params but only 3B active per token = fast inference
+- **APEX I-Quality** — highest quality quantization tier with imatrix covering chat, code, reasoning, tool calls
+- **256K context** — handle entire repositories, not just single files
+- **23GB fits Railway's 24GB RAM** allocation
 
-**Why Qwen3-Coder 30B?**
-- **MoE Architecture**: 30B total params, only 3.3B active → fast inference even on limited hardware
-- **256K native context**: Handle entire repositories, not just single files
-- **SWE-Bench trained**: Reinforcement learning specifically on real-world software engineering tasks
-- **19GB at Q4_K_M**: Fits comfortably in Railway's 24GB RAM allocation
-- **5.3M+ Ollama downloads**: Well-tested, community-proven
-
-### Benchmark Sources
-1. [Morph — Best Ollama Models 2026](https://www.morphllm.com/best-ollama-models) (April 2026, real hardware testing)
-2. [BenchLM.ai — SWE-bench & LiveCodeBench Leaderboard](https://benchlm.ai/coding) (May 2026, 95+ models ranked)
-3. [Ollama Model Library — qwen3-coder:30b](https://ollama.com/library/qwen3-coder:30b) (official specs)
-
-### Fallback Model: CodeLlama 13B
-Lighter model for faster responses when full reasoning isn't needed. 7.4GB, fits alongside the primary model.
+### Sources
+1. [Ollama — yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality](https://ollama.com/yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality)
+2. [HuggingFace — mudler/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-GGUF](https://huggingface.co/mudler/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-GGUF)
+3. [HuggingFace — lordx64/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled](https://huggingface.co/lordx64/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled) (source distillation model)
 
 ---
 
@@ -40,26 +38,25 @@ Lighter model for faster responses when full reasoning isn't needed. 7.4GB, fits
 
 ### User Features
 - **Chat UI**: Code generation, debugging, file explanation — streaming responses
-- **Model Selector**: Switch between Qwen3-Coder 30B and CodeLlama 13B
+- **Model Selector**: Choose from available models (admin can add more)
 - **Query History**: Full log of all prompts and responses
 - **Code Export**: Download any response as a code snippet
 - **VS Code Integration**: Auto-generated Continue `config.json` with your API endpoint
-- **Pro Plan ($9/mo)**: Unlimited queries (free tier: 100/day)
+- **Free tier**: 100 queries/day (admin can upgrade users to Pro for unlimited)
 
 ### Admin Panel (superadmin)
-- **User Management**: View all users, change roles, ban/suspend accounts
+- **User Management**: Create users, change roles, reset passwords, ban/suspend
 - **Query Browser**: View all queries across users
 - **Analytics Dashboard**: Usage stats, active users, response times
 - **Model Management**: Add/remove/switch Ollama models live
-- **Subscription Management**: Upgrade/downgrade users, cancel subscriptions
 - **API Logs**: Full request/response audit trail
 
 ### Security
-- Clerk authentication with role-based access (user/pro/admin)
+- Custom JWT authentication (7-day tokens)
+- Role-based access control (USER / PRO / ADMIN)
 - Rate limiting (200 req/min)
 - Helmet security headers
-- API key validation
-- Hashed admin password (bcrypt, 12 rounds)
+- Hashed passwords (bcrypt, 12 rounds)
 - Protected admin routes
 
 ---
@@ -70,10 +67,9 @@ Lighter model for faster responses when full reasoning isn't needed. 7.4GB, fits
 |-------|-----------|
 | Frontend | Next.js 15, Tailwind CSS, shadcn/ui |
 | Backend | Node.js, Fastify 5, Prisma ORM |
-| AI Engine | Ollama (qwen3-coder:30b + codellama:13b) |
+| AI Engine | Ollama (Qwen3.6-35B Claude Opus Distilled) |
 | Database | PostgreSQL (Railway) |
-| Auth | Clerk (free tier) |
-| Payments | Stripe (checkout + webhooks) |
+| Auth | Custom JWT (email/password) |
 | Deploy | Render (frontend) + Railway (backend + Ollama) |
 
 ---
@@ -83,8 +79,6 @@ Lighter model for faster responses when full reasoning isn't needed. 7.4GB, fits
 ### Prerequisites
 - Node.js 22+
 - PostgreSQL database
-- Clerk account (free)
-- Stripe account (test mode)
 
 ### 1. Clone & Install
 
@@ -106,7 +100,7 @@ cp .env.example .env.local  # Fill in your values
 ```bash
 cd backend
 npx prisma db push       # Create tables
-node prisma/seed.js      # Seed admin + models
+node prisma/seed.js      # Seed admin + model
 ```
 
 ### 3. Run Locally
@@ -114,7 +108,7 @@ node prisma/seed.js      # Seed admin + models
 ```bash
 # Terminal 1: Ollama
 ollama serve
-ollama pull qwen3-coder:30b
+ollama pull yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality
 
 # Terminal 2: Backend
 cd backend && npm run dev
@@ -138,8 +132,6 @@ See [docs/vscode-setup.md](docs/vscode-setup.md) for detailed instructions.
 
 ### Railway (Backend + Ollama + Postgres)
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template)
-
 1. Create Railway project with PostgreSQL
 2. Deploy Ollama service from `ollama/Dockerfile`
 3. Deploy backend from `backend/Dockerfile`
@@ -147,11 +139,8 @@ See [docs/vscode-setup.md](docs/vscode-setup.md) for detailed instructions.
 
 ### Render (Frontend)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
-
 1. Connect GitHub repo, root directory: `frontend`
 2. Set `NEXT_PUBLIC_API_URL` to your Railway backend URL
-3. Add Clerk keys
 
 See [docs/deploy-guide.md](docs/deploy-guide.md) for the full deployment guide.
 
@@ -164,7 +153,13 @@ After seeding the database, the admin account is pre-created:
 - **Email**: `harryroger798@gmail.com`
 - **Password**: `007JamesBond@@` (hashed with bcrypt)
 
-Navigate to `/admin` after logging in. Admin access requires the `ADMIN` role in Clerk.
+Navigate to `/admin` after logging in. Only users with `ADMIN` role can access admin routes.
+
+Admin can:
+- Create new users with passwords
+- Upgrade users to PRO (unlimited queries)
+- Reset user passwords
+- Ban/suspend users
 
 ---
 
@@ -179,23 +174,22 @@ OllamaCodeHub/
 │   │   │   ├── dashboard/        # Chat UI + history
 │   │   │   ├── admin/            # Admin panel
 │   │   │   ├── vscode-setup/     # VS Code config generator
-│   │   │   ├── sign-in/          # Clerk sign-in
-│   │   │   └── sign-up/          # Clerk sign-up
+│   │   │   ├── login/            # Login page
+│   │   │   └── signup/           # Signup page
 │   │   ├── components/ui/        # shadcn/ui components
-│   │   ├── lib/                  # API client, utilities
-│   │   └── middleware.ts         # Route protection
+│   │   └── lib/                  # API client, auth, utilities
 │   ├── Dockerfile
 │   └── render.yaml
 ├── backend/                 # Fastify API + Prisma
 │   ├── src/
 │   │   ├── routes/
+│   │   │   ├── auth.js           # Login, signup, admin user creation
 │   │   │   ├── chat.js           # /v1/chat/completions (OpenAI-compat)
 │   │   │   ├── admin.js          # /admin/* endpoints
-│   │   │   ├── stripe.js         # Stripe checkout + webhooks
 │   │   │   ├── vscode.js         # VS Code config endpoint
 │   │   │   └── health.js         # Health check
-│   │   ├── middleware/auth.js    # Clerk auth + role guards
-│   │   ├── services/             # Ollama + Stripe clients
+│   │   ├── middleware/auth.js    # JWT auth + role guards
+│   │   ├── services/ollama.js   # Ollama client
 │   │   └── config/               # DB + env config
 │   ├── prisma/
 │   │   ├── schema.prisma         # Database schema
@@ -204,11 +198,12 @@ OllamaCodeHub/
 │   └── railway.toml
 ├── ollama/                  # Ollama deployment
 │   ├── Dockerfile
-│   ├── entrypoint.sh             # Auto-pull models on start
+│   ├── entrypoint.sh             # Auto-pull model on start
 │   └── railway.toml
 ├── docs/
 │   ├── deploy-guide.md
-│   └── vscode-setup.md
+│   ├── vscode-setup.md
+│   └── e2e-test.sh
 └── README.md
 ```
 
@@ -220,8 +215,6 @@ OllamaCodeHub/
 |---------|------|-------------|
 | Railway (Ollama + API + Postgres) | Pro | ~$50-70 |
 | Render (Frontend) | Starter | $19 |
-| Clerk | Free tier | $0 |
-| Stripe | Pay-as-you-go | ~$0 |
 | **Total** | | **~$70-90/mo** |
 
 Well under the $100/mo target.
@@ -230,19 +223,26 @@ Well under the $100/mo target.
 
 ## API Reference
 
+### Auth
+```
+POST /auth/login           # { email, password } → { token, user }
+POST /auth/signup          # { email, password, name? } → { token, user }
+GET  /auth/me              # Get current user (requires Bearer token)
+```
+
 ### Chat Completions (OpenAI-compatible)
 ```
 POST /v1/chat/completions
-Authorization: Bearer <clerk-jwt>
+Authorization: Bearer <jwt-token>
 
 {
-  "model": "qwen3-coder:30b",
+  "model": "yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality:latest",
   "messages": [{"role": "user", "content": "Write a React hook for..."}],
   "stream": true
 }
 ```
 
-### Models
+### Models & History
 ```
 GET /v1/models          # List available models
 GET /v1/history         # Query history
@@ -253,7 +253,9 @@ GET /vscode/config      # VS Code Continue config
 ### Admin
 ```
 GET    /admin/users              # List users
-PATCH  /admin/users/:id/role     # Change role
+POST   /admin/users/create       # Create user with password
+POST   /admin/users/:id/password # Reset user password
+PATCH  /admin/users/:id/role     # Change role (USER/PRO/ADMIN)
 PATCH  /admin/users/:id/ban      # Ban/unban
 GET    /admin/analytics          # Usage stats
 GET    /admin/models             # Model management

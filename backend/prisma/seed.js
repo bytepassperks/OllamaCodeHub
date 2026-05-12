@@ -21,30 +21,18 @@ async function main() {
   });
 
   await prisma.ollamaModel.upsert({
-    where: { name: "qwen3-coder" },
+    where: { name: "yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality" },
     update: {},
     create: {
-      name: "qwen3-coder",
-      tag: "30b",
+      name: "yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality",
+      tag: "latest",
       isDefault: true,
       isActive: true,
-      sizeGb: 19,
+      sizeGb: 23,
     },
   });
 
-  await prisma.ollamaModel.upsert({
-    where: { name: "codellama" },
-    update: {},
-    create: {
-      name: "codellama",
-      tag: "13b",
-      isDefault: false,
-      isActive: true,
-      sizeGb: 7.4,
-    },
-  });
-
-  console.log("Seed complete: admin + models created");
+  console.log("Seed complete: admin + model created");
 }
 
 main()
