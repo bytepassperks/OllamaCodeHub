@@ -3,22 +3,26 @@ import { config } from "../config/env.js";
 const OLLAMA_URL = config.ollamaBaseUrl;
 const MODAL_URL = config.modalInferenceUrl;
 
-export async function chatCompletion(model, messages, stream = false) {
+export async function chatCompletion(model, messages, stream = false, tools = null, toolChoice = null) {
   if (MODAL_URL) {
-    return modalChatCompletion(model, messages, stream);
+    return modalChatCompletion(model, messages, stream, tools, toolChoice);
   }
-  return ollamaChatCompletion(model, messages, stream);
+  return ollamaChatCompletion(model, messages, stream, tools, toolChoice);
 }
 
-async function modalChatCompletion(model, messages, stream) {
+async function modalChatCompletion(model, messages, stream, tools, toolChoice) {
+  const payload = {
+    messages,
+    temperature: 0.7,
+    max_tokens: 4096,
+  };
+  if (tools) payload.tools = tools;
+  if (toolChoice) payload.tool_choice = toolChoice;
+
   const response = await fetch(MODAL_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      messages,
-      temperature: 0.7,
-      max_tokens: 4096,
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -30,7 +34,8 @@ async function modalChatCompletion(model, messages, stream) {
 
   if (stream) {
     const content = result.choices?.[0]?.message?.content || "";
-    const sseStream = simulateSSEStream(content, model);
+    const toolCalls = result.choices?.[0]?.message?.tool_calls;
+    const sseStream = simulateSSEStream(content, model, toolCalls);
     return new Response(sseStream, {
       headers: { "Content-Type": "text/event-stream" },
     });
@@ -39,10 +44,11 @@ async function modalChatCompletion(model, messages, stream) {
   return result;
 }
 
-function simulateSSEStream(content, model) {
+function simulateSSEStream(content, model, toolCalls) {
   const encoder = new TextEncoder();
   const words = content.split(/(\s+)/);
   let index = 0;
+  let sentToolCalls = false;
 
   return new ReadableStream({
     pull(controller) {
@@ -62,6 +68,19 @@ function simulateSSEStream(content, model) {
           }],
         };
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+      } else if (toolCalls && !sentToolCalls) {
+        sentToolCalls = true;
+        const chunk = {
+          id: "chatcmpl-modal",
+          object: "chat.completion.chunk",
+          model,
+          choices: [{
+            index: 0,
+            delta: { tool_calls: toolCalls },
+            finish_reason: "tool_calls",
+          }],
+        };
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
       } else {
         const doneChunk = {
           id: "chatcmpl-modal",
@@ -70,7 +89,7 @@ function simulateSSEStream(content, model) {
           choices: [{
             index: 0,
             delta: {},
-            finish_reason: "stop",
+            finish_reason: toolCalls ? "tool_calls" : "stop",
           }],
         };
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(doneChunk)}\n\n`));
@@ -81,8 +100,12 @@ function simulateSSEStream(content, model) {
   });
 }
 
-async function ollamaChatCompletion(model, messages, stream) {
+async function ollamaChatCompletion(model, messages, stream, tools, toolChoice) {
   const url = `${OLLAMA_URL}/v1/chat/completions`;
+
+  const payload = { model, messages, stream };
+  if (tools) payload.tools = tools;
+  if (toolChoice) payload.tool_choice = toolChoice;
 
   const response = await fetch(url, {
     method: "POST",
@@ -90,7 +113,7 @@ async function ollamaChatCompletion(model, messages, stream) {
       "Content-Type": "application/json",
       ...(config.ollamaApiKey && { Authorization: `Bearer ${config.ollamaApiKey}` }),
     },
-    body: JSON.stringify({ model, messages, stream }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {

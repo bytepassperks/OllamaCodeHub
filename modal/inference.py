@@ -77,12 +77,14 @@ class Inference:
 
     @modal.fastapi_endpoint(method="POST")
     def chat(self, data: dict):
-        """OpenAI-compatible /v1/chat/completions endpoint."""
+        """OpenAI-compatible /v1/chat/completions endpoint with tool calling."""
         messages = data.get("messages", [])
         temperature = data.get("temperature", 0.7)
         max_tokens = data.get("max_tokens", 4096)
+        tools = data.get("tools")
+        tool_choice = data.get("tool_choice")
 
-        payload = json.dumps({
+        ollama_payload = {
             "model": MODEL_NAME,
             "messages": messages,
             "stream": False,
@@ -90,7 +92,14 @@ class Inference:
                 "temperature": temperature,
                 "num_predict": max_tokens,
             }
-        }).encode()
+        }
+
+        if tools:
+            ollama_payload["tools"] = tools
+        if tool_choice:
+            ollama_payload["tool_choice"] = tool_choice
+
+        payload = json.dumps(ollama_payload).encode()
 
         req = urllib.request.Request(
             "http://localhost:11434/api/chat",
@@ -101,15 +110,36 @@ class Inference:
         resp = urllib.request.urlopen(req, timeout=300)
         result = json.loads(resp.read())
 
-        content = result.get("message", {}).get("content", "")
+        msg = result.get("message", {})
+        content = msg.get("content", "")
+        tool_calls = msg.get("tool_calls")
+
+        assistant_message = {"role": "assistant", "content": content}
+        finish_reason = "stop"
+
+        if tool_calls:
+            openai_tool_calls = []
+            for i, tc in enumerate(tool_calls):
+                fn = tc.get("function", {})
+                openai_tool_calls.append({
+                    "id": f"call_{i}",
+                    "type": "function",
+                    "function": {
+                        "name": fn.get("name", ""),
+                        "arguments": json.dumps(fn.get("arguments", {})),
+                    },
+                })
+            assistant_message["tool_calls"] = openai_tool_calls
+            finish_reason = "tool_calls"
+
         return {
             "id": "chatcmpl-modal",
             "object": "chat.completion",
             "model": MODEL_NAME,
             "choices": [{
                 "index": 0,
-                "message": {"role": "assistant", "content": content},
-                "finish_reason": "stop",
+                "message": assistant_message,
+                "finish_reason": finish_reason,
             }],
             "usage": {
                 "prompt_tokens": result.get("prompt_eval_count", 0),

@@ -59,10 +59,10 @@ export default function VSCodeSetupPage() {
       </nav>
 
       <main className="max-w-4xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold mb-2">VS Code Integration</h1>
+        <h1 className="text-3xl font-bold mb-2">VS Code AI Agent Setup</h1>
         <p className="text-muted-foreground mb-8">
-          Connect OllamaCodeHub to VS Code using the Continue extension for
-          AI-powered autocomplete and chat.
+          Turn VS Code into a Devin-like AI coding agent using Continue + OllamaCodeHub.
+          Chat, edit code, create files, and run commands — all powered by Claude Opus 4.7.
         </p>
 
         <div className="space-y-6">
@@ -138,19 +138,78 @@ export default function VSCodeSetupPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Step 4: Save &amp; Select Model</CardTitle>
+              <CardTitle>Step 4: Save &amp; Open a Project</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-muted-foreground">
                 Press{" "}
                 <code className="bg-secondary px-1.5 py-0.5 rounded text-sm">Ctrl+S</code>{" "}
-                to save. Then in the Continue chat panel (left sidebar), click{" "}
+                to save. Then open a project folder:{" "}
+                <code className="bg-secondary px-1.5 py-0.5 rounded text-sm">File → Open Folder</code>{" "}
+                → pick any folder with your code.
+              </p>
+              <p className="text-muted-foreground">
+                Click the Continue icon in the left sidebar, then click{" "}
                 <strong>&quot;Select model&quot;</strong> and pick{" "}
                 <strong>&quot;Claude Opus 4.7&quot;</strong>.
               </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Step 5: Use Agent Mode (Devin-like AI)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <p className="text-muted-foreground">
-                Type a message like <code className="bg-secondary px-1.5 py-0.5 rounded text-sm">hello</code> and press Enter to test.
-                First request may take ~45 seconds (cold start), then ~3 seconds after that.
+                At the top of the Continue chat panel, you&apos;ll see a dropdown that says{" "}
+                <strong>&quot;Chat&quot;</strong>. Click it and switch to{" "}
+                <strong>&quot;Agent&quot;</strong> for the full AI coding agent experience.
+              </p>
+              <div className="bg-secondary p-4 rounded-lg space-y-3">
+                <p className="font-medium text-sm">What the Agent can do:</p>
+                <ul className="text-muted-foreground text-sm space-y-1.5 list-disc pl-5">
+                  <li>Read and understand your entire codebase</li>
+                  <li>Create new files and write code from scratch</li>
+                  <li>Edit existing files across your project</li>
+                  <li>Run terminal commands (npm install, git, tests, etc.)</li>
+                  <li>Search your codebase with grep and glob</li>
+                  <li>Search the web for documentation</li>
+                  <li>Fix bugs autonomously across multiple files</li>
+                </ul>
+              </div>
+              <div className="bg-secondary p-4 rounded-lg space-y-3">
+                <p className="font-medium text-sm">3 ways to use it:</p>
+                <ul className="text-muted-foreground text-sm space-y-1.5">
+                  <li>
+                    <strong>Chat</strong> (<code className="bg-background px-1 rounded">Ctrl+L</code>) — Ask questions, get code suggestions
+                  </li>
+                  <li>
+                    <strong>Edit</strong> (<code className="bg-background px-1 rounded">Ctrl+I</code>) — Select code → tell it what to change → it edits the file
+                  </li>
+                  <li>
+                    <strong>Agent</strong> — Give it a task like &quot;Create a REST API with authentication&quot; and it builds it autonomously
+                  </li>
+                </ul>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                First request may take ~45 seconds (cold start). After that, responses are ~3 seconds.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Limitations</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-muted-foreground text-sm">
+                <strong>No image support</strong> — The model is text-only. You cannot attach images/screenshots for analysis.
+                Use text descriptions or paste code instead.
+              </p>
+              <p className="text-muted-foreground text-sm">
+                <strong>Complex agent tasks</strong> — For very large multi-step tasks, the model may need guidance.
+                Break complex requests into smaller steps for best results.
               </p>
             </CardContent>
           </Card>

@@ -7,7 +7,7 @@ export default async function chatRoutes(fastify) {
     "/v1/chat/completions",
     { preHandler: [authenticateUser, checkQueryLimit] },
     async (request, reply) => {
-      const { model, messages, stream } = request.body;
+      const { model, messages, stream, tools, tool_choice } = request.body;
       const user = request.user;
       const startTime = Date.now();
 
@@ -25,7 +25,7 @@ export default async function chatRoutes(fastify) {
       const ollamaModel = `${dbModel.name}:${dbModel.tag}`;
 
       if (stream) {
-        const response = await chatCompletion(ollamaModel, messages, true);
+        const response = await chatCompletion(ollamaModel, messages, true, tools, tool_choice);
         const origin = request.headers.origin || "*";
         reply.raw.writeHead(200, {
           "Content-Type": "text/event-stream",
@@ -82,7 +82,7 @@ export default async function chatRoutes(fastify) {
         return;
       }
 
-      const result = await chatCompletion(ollamaModel, messages, false);
+      const result = await chatCompletion(ollamaModel, messages, false, tools, tool_choice);
       const durationMs = Date.now() - startTime;
 
       const responseText =
