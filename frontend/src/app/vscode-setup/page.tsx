@@ -10,8 +10,7 @@ import { getToken } from "@/lib/auth";
 
 export default function VSCodeSetupPage() {
   const router = useRouter();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [config, setConfig] = useState<any>(null);
+  const [yamlConfig, setYamlConfig] = useState<string>("");
   const [instructions, setInstructions] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
 
@@ -24,7 +23,7 @@ export default function VSCodeSetupPage() {
       const token = getToken();
       if (!token) return;
       const data = await apiClient("/vscode/config", { token });
-      setConfig(data.config);
+      setYamlConfig(data.yamlConfig || "");
       setInstructions(data.instructions || []);
     } catch {
       /* user not logged in or API down */
@@ -36,8 +35,8 @@ export default function VSCodeSetupPage() {
   }, [fetchConfig]);
 
   const copyConfig = () => {
-    if (config) {
-      navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+    if (yamlConfig) {
+      navigator.clipboard.writeText(yamlConfig);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -92,22 +91,38 @@ export default function VSCodeSetupPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Step 2: Configure Continue</CardTitle>
+              <CardTitle>Step 2: Open Continue Config</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-muted-foreground">
-                Open Continue settings:{" "}
+                Press{" "}
                 <code className="bg-secondary px-1.5 py-0.5 rounded text-sm">
-                  Ctrl+Shift+P &rarr; Continue: Open config.json
-                </code>
+                  Ctrl+Shift+P
+                </code>{" "}
+                (or Cmd+Shift+P on Mac) &rarr; type{" "}
+                <code className="bg-secondary px-1.5 py-0.5 rounded text-sm">
+                  Continue: Open config.yaml
+                </code>{" "}
+                &rarr; click it
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Step 3: Replace Config</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-muted-foreground">
+                Select all (<code className="bg-secondary px-1.5 py-0.5 rounded text-sm">Ctrl+A</code>),
+                delete everything, then paste this config.
+                Your API token is already filled in!
               </p>
               <div className="relative">
-                <pre className="bg-secondary p-4 rounded-lg text-sm overflow-x-auto">
-                  {config
-                    ? JSON.stringify(config, null, 2)
-                    : "Loading... (sign in to see your config)"}
+                <pre className="bg-secondary p-4 rounded-lg text-sm overflow-x-auto whitespace-pre">
+                  {yamlConfig || "Loading... (sign in to see your config)"}
                 </pre>
-                {config && (
+                {yamlConfig && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -123,22 +138,20 @@ export default function VSCodeSetupPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Step 3: Add Your API Token</CardTitle>
+              <CardTitle>Step 4: Save &amp; Select Model</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-muted-foreground">
-                Replace{" "}
-                <code className="bg-secondary px-1.5 py-0.5 rounded text-sm">
-                  your-jwt-token
-                </code>{" "}
-                in the config with your JWT token from login.
+                Press{" "}
+                <code className="bg-secondary px-1.5 py-0.5 rounded text-sm">Ctrl+S</code>{" "}
+                to save. Then in the Continue chat panel (left sidebar), click{" "}
+                <strong>&quot;Select model&quot;</strong> and pick{" "}
+                <strong>&quot;Claude Opus 4.7&quot;</strong>.
               </p>
               <p className="text-muted-foreground">
-                You can find your token in localStorage after logging in:
+                Type a message like <code className="bg-secondary px-1.5 py-0.5 rounded text-sm">hello</code> and press Enter to test.
+                First request may take ~45 seconds (cold start), then ~3 seconds after that.
               </p>
-              <pre className="bg-secondary p-3 rounded-lg text-sm">
-                {`// In browser console on the dashboard page:\nlocalStorage.getItem('ollamacodehub_token')`}
-              </pre>
             </CardContent>
           </Card>
 

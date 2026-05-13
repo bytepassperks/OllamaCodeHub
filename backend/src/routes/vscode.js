@@ -17,35 +17,27 @@ export default async function vscodeRoutes(fastify) {
       // Generate a fresh long-lived token for VS Code usage
       const userToken = signToken(request.user);
 
-      const continueConfig = {
-        models: [
-          {
-            title: "OllamaCodeHub — Qwen3.6-35B Claude Opus Distilled",
-            provider: "openai",
-            model: "nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull",
-            apiBase: `${backendUrl}/v1`,
-            apiKey: userToken,
-            contextLength: 32768,
-          },
-        ],
-        tabAutocompleteModel: {
-          title: "OllamaCodeHub Autocomplete",
-          provider: "openai",
-          model: "nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull",
-          apiBase: `${backendUrl}/v1`,
-          apiKey: userToken,
-        },
-      };
+      const yamlConfig = `name: OllamaCodeHub
+version: 0.0.1
+schema: v1
+
+models:
+  - name: Claude Opus 4.7
+    provider: openai
+    model: nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull
+    apiBase: ${backendUrl}/v1
+    apiKey: ${userToken}
+    contextLength: 32768`;
 
       return {
-        config: continueConfig,
+        yamlConfig,
         backendUrl,
         token: userToken,
         instructions: [
           "1. Install the 'Continue' extension in VS Code (ext install Continue.continue).",
-          "2. Open Continue settings: Ctrl+Shift+P → 'Continue: Open config.json'.",
-          "3. Paste the config JSON above — your token is already filled in.",
-          "4. Save the file and start coding with AI-powered autocomplete and chat!",
+          "2. Press Ctrl+Shift+P → type 'Continue: Open config.yaml' → click it.",
+          "3. Select all (Ctrl+A), delete, then paste the YAML config above.",
+          "4. Save the file (Ctrl+S) and start coding with AI-powered chat!",
           `5. Your backend URL: ${backendUrl}`,
           "6. Token expires in 7 days. Revisit this page to regenerate.",
         ],
