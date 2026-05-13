@@ -9,6 +9,7 @@ import subprocess
 import time
 import os
 import json
+import re
 import urllib.request
 
 app = modal.App("ollamacodehub-inference")
@@ -84,25 +85,24 @@ class Inference:
         tools = data.get("tools")
         tool_choice = data.get("tool_choice")
 
-        ollama_payload = {
+        # Use OpenAI-compatible endpoint for better tool support
+        oai_payload = {
             "model": MODEL_NAME,
             "messages": messages,
             "stream": False,
-            "options": {
-                "temperature": temperature,
-                "num_predict": max_tokens,
-            }
+            "temperature": temperature,
+            "max_tokens": max_tokens,
         }
 
         if tools:
-            ollama_payload["tools"] = tools
+            oai_payload["tools"] = tools
         if tool_choice:
-            ollama_payload["tool_choice"] = tool_choice
+            oai_payload["tool_choice"] = tool_choice
 
-        payload = json.dumps(ollama_payload).encode()
+        payload = json.dumps(oai_payload).encode()
 
         req = urllib.request.Request(
-            "http://localhost:11434/api/chat",
+            "http://localhost:11434/v1/chat/completions",
             data=payload,
             headers={"Content-Type": "application/json"},
         )
@@ -110,30 +110,21 @@ class Inference:
         resp = urllib.request.urlopen(req, timeout=300)
         result = json.loads(resp.read())
 
-        msg = result.get("message", {})
-        content = msg.get("content", "")
+        msg = result.get("choices", [{}])[0].get("message", {})
+        raw_content = msg.get("content", "")
         tool_calls = msg.get("tool_calls")
 
-        assistant_message = {"role": "assistant", "content": content}
-        finish_reason = "stop"
+        # Strip <think>...</think> blocks from output for cleaner responses
+        content = re.sub(r'<think>.*?</think>\s*', '', raw_content, flags=re.DOTALL).strip()
 
+        assistant_message = {"role": "assistant", "content": content}
         if tool_calls:
-            openai_tool_calls = []
-            for i, tc in enumerate(tool_calls):
-                fn = tc.get("function", {})
-                openai_tool_calls.append({
-                    "id": f"call_{i}",
-                    "type": "function",
-                    "function": {
-                        "name": fn.get("name", ""),
-                        "arguments": json.dumps(fn.get("arguments", {})),
-                    },
-                })
-            assistant_message["tool_calls"] = openai_tool_calls
-            finish_reason = "tool_calls"
+            assistant_message["tool_calls"] = tool_calls
+
+        finish_reason = "tool_calls" if tool_calls else "stop"
 
         return {
-            "id": "chatcmpl-modal",
+            "id": result.get("id", "chatcmpl-modal"),
             "object": "chat.completion",
             "model": MODEL_NAME,
             "choices": [{
@@ -141,14 +132,11 @@ class Inference:
                 "message": assistant_message,
                 "finish_reason": finish_reason,
             }],
-            "usage": {
-                "prompt_tokens": result.get("prompt_eval_count", 0),
-                "completion_tokens": result.get("eval_count", 0),
-                "total_tokens": (
-                    result.get("prompt_eval_count", 0) +
-                    result.get("eval_count", 0)
-                ),
-            },
+            "usage": result.get("usage", {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+            }),
         }
 
     @modal.fastapi_endpoint(method="GET")
