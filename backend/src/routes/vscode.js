@@ -20,9 +20,9 @@ export default async function vscodeRoutes(fastify) {
       const continueConfig = {
         models: [
           {
-            title: "OllamaCodeHub — qwen2.5-coder:7b",
+            title: "OllamaCodeHub — qwen2.5-coder:3b",
             provider: "openai",
-            model: "qwen2.5-coder:7b",
+            model: "qwen2.5-coder:3b",
             apiBase: `${backendUrl}/v1`,
             apiKey: userToken,
             contextLength: 32768,
@@ -31,7 +31,7 @@ export default async function vscodeRoutes(fastify) {
         tabAutocompleteModel: {
           title: "OllamaCodeHub Autocomplete",
           provider: "openai",
-          model: "qwen2.5-coder:7b",
+          model: "qwen2.5-coder:3b",
           apiBase: `${backendUrl}/v1`,
           apiKey: userToken,
         },

@@ -21,14 +21,14 @@ async function main() {
   });
 
   await prisma.ollamaModel.upsert({
-    where: { name: "qwen2.5-coder" },
-    update: { tag: "7b", isDefault: true, isActive: true, sizeGb: 4.7 },
+    where: { name: "nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull" },
+    update: { tag: "Q2_K_MTX", isDefault: true, isActive: true, sizeGb: 13.0 },
     create: {
-      name: "qwen2.5-coder",
-      tag: "7b",
+      name: "nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull",
+      tag: "Q2_K_MTX",
       isDefault: true,
       isActive: true,
-      sizeGb: 4.7,
+      sizeGb: 13.0,
     },
   });
 

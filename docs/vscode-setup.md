@@ -31,9 +31,9 @@ Your config will look like this (with your real token filled in):
 {
   "models": [
     {
-      "title": "OllamaCodeHub — qwen2.5-coder:7b",
+      "title": "OllamaCodeHub — qwen2.5-coder:3b",
       "provider": "openai",
-      "model": "qwen2.5-coder:7b",
+      "model": "qwen2.5-coder:3b",
       "apiBase": "https://backend-production-57447.up.railway.app/v1",
       "apiKey": "YOUR-TOKEN-AUTO-FILLED",
       "contextLength": 32768
@@ -42,7 +42,7 @@ Your config will look like this (with your real token filled in):
   "tabAutocompleteModel": {
     "title": "OllamaCodeHub Autocomplete",
     "provider": "openai",
-    "model": "qwen2.5-coder:7b",
+    "model": "qwen2.5-coder:3b",
     "apiBase": "https://backend-production-57447.up.railway.app/v1",
     "apiKey": "YOUR-TOKEN-AUTO-FILLED"
   }

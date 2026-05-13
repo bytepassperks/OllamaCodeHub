@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [model, setModel] = useState("qwen2.5-coder:7b");
+  const [model, setModel] = useState("qwen2.5-coder:3b");
   const [models, setModels] = useState<Array<{ id: string; isDefault: boolean }>>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<TabType>("chat");
   const [history, setHistory] = useState<QueryRecord[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const user = getUser();
 
   useEffect(() => {
@@ -146,11 +147,13 @@ export default function DashboardPage() {
     } catch (err) {
       assistantMsg.content += `\n\nError: ${err instanceof Error ? err.message : "Request failed"}`;
       setMessages([...newMessages, { ...assistantMsg }]);
+    } finally {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setIsStreaming(false);
+      setIsThinking(false);
+      // Re-focus input so user can immediately type next message
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
-
-    if (timerRef.current) clearInterval(timerRef.current);
-    setIsStreaming(false);
-    setIsThinking(false);
   };
 
   const exportSnippet = (query: QueryRecord) => {
@@ -226,7 +229,7 @@ export default function DashboardPage() {
                 ))
               ) : (
                 <>
-                  <option value="qwen2.5-coder:7b">Qwen2.5 Coder 7B (Fast)</option>
+                  <option value="qwen2.5-coder:3b">Qwen2.5 Coder 3B (Fast)</option>
                 </>
               )}
             </select>
@@ -335,11 +338,13 @@ export default function DashboardPage() {
                 className="flex gap-2"
               >
                 <Input
+                  ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Write a React component that..."
                   className="flex-1"
                   disabled={isStreaming}
+                  autoFocus
                 />
                 <Button type="submit" disabled={isStreaming || !input.trim()}>
                   {isStreaming ? `${elapsedTime}s...` : "Send"}

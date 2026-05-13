@@ -12,7 +12,7 @@ export default async function chatRoutes(fastify) {
       const startTime = Date.now();
 
       const defaultModel = await prisma.ollamaModel.findFirst({ where: { isDefault: true, isActive: true } });
-      const selectedModel = model || (defaultModel ? `${defaultModel.name}:${defaultModel.tag}` : "qwen2.5-coder:7b");
+      const selectedModel = model || (defaultModel ? `${defaultModel.name}:${defaultModel.tag}` : "qwen2.5-coder:3b");
 
       const modelName = selectedModel.includes(":") ? selectedModel.split(":").slice(0, -1).join(":") : selectedModel;
       const dbModel = await prisma.ollamaModel.findFirst({
