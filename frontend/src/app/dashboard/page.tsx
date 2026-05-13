@@ -229,7 +229,7 @@ export default function DashboardPage() {
                 ))
               ) : (
                 <>
-                  <option value="qwen2.5-coder:3b">Qwen2.5 Coder 3B (Fast)</option>
+                  <option value="nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull">Claude Opus 4.7 (GPU)</option>
                 </>
               )}
             </select>

@@ -11,7 +11,7 @@ export default async function vscodeRoutes(fastify) {
         process.env.RAILWAY_PUBLIC_DOMAIN
           ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
           : config.nodeEnv === "production"
-            ? "https://backend-production-57447.up.railway.app"
+            ? "https://backend-production-bd0e.up.railway.app"
             : `http://localhost:${config.port}`;
 
       // Generate a fresh long-lived token for VS Code usage
@@ -20,9 +20,9 @@ export default async function vscodeRoutes(fastify) {
       const continueConfig = {
         models: [
           {
-            title: "OllamaCodeHub — qwen2.5-coder:3b",
+            title: "OllamaCodeHub — Qwen3.6-35B Claude Opus Distilled",
             provider: "openai",
-            model: "qwen2.5-coder:3b",
+            model: "nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull",
             apiBase: `${backendUrl}/v1`,
             apiKey: userToken,
             contextLength: 32768,
@@ -31,7 +31,7 @@ export default async function vscodeRoutes(fastify) {
         tabAutocompleteModel: {
           title: "OllamaCodeHub Autocomplete",
           provider: "openai",
-          model: "qwen2.5-coder:3b",
+          model: "nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull",
           apiBase: `${backendUrl}/v1`,
           apiKey: userToken,
         },
