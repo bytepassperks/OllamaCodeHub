@@ -15,7 +15,7 @@ export default async function vscodeRoutes(fastify) {
           {
             title: "OllamaCodeHub — Qwen3.6-35B Claude Opus Distilled",
             provider: "openai",
-            model: "nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull:Q2_K_MTX",
+            model: "qwen2.5-coder:7b",
             apiBase: `${backendUrl}/v1`,
             apiKey: "your-jwt-token",
             contextLength: 32768,
@@ -24,7 +24,7 @@ export default async function vscodeRoutes(fastify) {
         tabAutocompleteModel: {
           title: "OllamaCodeHub Autocomplete",
           provider: "openai",
-          model: "nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull:Q2_K_MTX",
+          model: "qwen2.5-coder:7b",
           apiBase: `${backendUrl}/v1`,
           apiKey: "your-jwt-token",
         },

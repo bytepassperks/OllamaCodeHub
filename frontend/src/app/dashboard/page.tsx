@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [model, setModel] = useState("nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull:Q2_K_MTX");
+  const [model, setModel] = useState("qwen2.5-coder:7b");
   const [models, setModels] = useState<Array<{ id: string; isDefault: boolean }>>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
@@ -226,7 +226,7 @@ export default function DashboardPage() {
                 ))
               ) : (
                 <>
-                  <option value="nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull:Q2_K_MTX">Qwen3.6-35B Claude Opus 4.7 (Q2_K)</option>
+                  <option value="qwen2.5-coder:7b">Qwen2.5 Coder 7B (Fast)</option>
                 </>
               )}
             </select>
