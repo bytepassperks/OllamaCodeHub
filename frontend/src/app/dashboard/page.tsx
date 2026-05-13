@@ -14,6 +14,7 @@ import { getToken, getUser, clearAuth, isAdmin } from "@/lib/auth";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  thinking?: string;
 }
 
 interface QueryRecord {
@@ -33,6 +34,10 @@ export default function DashboardPage() {
   const [model, setModel] = useState("nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull:Q2_K_MTX");
   const [models, setModels] = useState<Array<{ id: string; isDefault: boolean }>>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [showThinking, setShowThinking] = useState<Record<number, boolean>>({});
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [tab, setTab] = useState<TabType>("chat");
   const [history, setHistory] = useState<QueryRecord[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -88,9 +93,20 @@ export default function DashboardPage() {
     setMessages(newMessages);
     setInput("");
     setIsStreaming(true);
+    setIsThinking(true);
+    setElapsedTime(0);
 
-    const assistantMsg: Message = { role: "assistant", content: "" };
+    // Start elapsed timer
+    const startTime = Date.now();
+    timerRef.current = setInterval(() => {
+      setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+
+    const assistantMsg: Message = { role: "assistant", content: "", thinking: "" };
     setMessages([...newMessages, assistantMsg]);
+
+    let rawContent = "";
+    let inThinkBlock = false;
 
     try {
       await streamChat(
@@ -98,7 +114,32 @@ export default function DashboardPage() {
         newMessages.map((m) => ({ role: m.role, content: m.content })),
         model,
         (chunk) => {
-          assistantMsg.content += chunk;
+          rawContent += chunk;
+
+          // Parse <think> blocks
+          const thinkOpenIdx = rawContent.indexOf("<think>");
+          const thinkCloseIdx = rawContent.indexOf("</think>");
+
+          if (thinkOpenIdx !== -1 && thinkCloseIdx === -1) {
+            // Still inside thinking
+            inThinkBlock = true;
+            setIsThinking(true);
+            assistantMsg.thinking = rawContent.slice(thinkOpenIdx + 7);
+            assistantMsg.content = "";
+          } else if (thinkCloseIdx !== -1) {
+            // Thinking complete, extract answer
+            inThinkBlock = false;
+            setIsThinking(false);
+            assistantMsg.thinking = rawContent.slice(
+              thinkOpenIdx !== -1 ? thinkOpenIdx + 7 : 0,
+              thinkCloseIdx
+            );
+            assistantMsg.content = rawContent.slice(thinkCloseIdx + 8).trimStart();
+          } else {
+            // No think tags at all
+            assistantMsg.content = rawContent;
+          }
+
           setMessages([...newMessages, { ...assistantMsg }]);
         }
       );
@@ -107,7 +148,9 @@ export default function DashboardPage() {
       setMessages([...newMessages, { ...assistantMsg }]);
     }
 
+    if (timerRef.current) clearInterval(timerRef.current);
     setIsStreaming(false);
+    setIsThinking(false);
   };
 
   const exportSnippet = (query: QueryRecord) => {
@@ -221,8 +264,57 @@ export default function DashboardPage() {
                     }`}
                   >
                     {msg.role === "assistant" ? (
-                      <div className="markdown-body prose prose-sm dark:prose-invert max-w-none">
-                        <ReactMarkdown>{msg.content || "..."}</ReactMarkdown>
+                      <div className="space-y-2">
+                        {/* Thinking indicator */}
+                        {isStreaming && i === messages.length - 1 && isThinking && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span className="inline-flex gap-1">
+                              <span className="animate-bounce" style={{ animationDelay: "0ms" }}>.</span>
+                              <span className="animate-bounce" style={{ animationDelay: "150ms" }}>.</span>
+                              <span className="animate-bounce" style={{ animationDelay: "300ms" }}>.</span>
+                            </span>
+                            <span className="font-medium text-purple-400">Thinking</span>
+                            <span className="text-xs opacity-70">({elapsedTime}s)</span>
+                          </div>
+                        )}
+
+                        {/* Elapsed time when waiting for first token */}
+                        {isStreaming && i === messages.length - 1 && !isThinking && !msg.content && !msg.thinking && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span className="animate-pulse">Generating response...</span>
+                            <span className="text-xs opacity-70">({elapsedTime}s)</span>
+                          </div>
+                        )}
+
+                        {/* Thinking content (collapsible) */}
+                        {msg.thinking && msg.thinking.trim() && (
+                          <div className="border border-purple-500/30 rounded-lg overflow-hidden">
+                            <button
+                              onClick={() => setShowThinking(prev => ({ ...prev, [i]: !prev[i] }))}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-purple-400 hover:bg-purple-500/10 transition-colors"
+                            >
+                              <span>{showThinking[i] ? "\u25BC" : "\u25B6"}</span>
+                              <span className="font-medium">Thinking process</span>
+                              <span className="opacity-60">({msg.thinking.trim().split("\n").length} lines)</span>
+                            </button>
+                            {showThinking[i] && (
+                              <div className="px-3 py-2 text-xs text-muted-foreground border-t border-purple-500/20 max-h-60 overflow-y-auto whitespace-pre-wrap font-mono">
+                                {msg.thinking.trim()}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Actual response content */}
+                        {msg.content ? (
+                          <div className="markdown-body prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          </div>
+                        ) : (
+                          !isStreaming && !msg.thinking && (
+                            <span className="text-muted-foreground">No response</span>
+                          )
+                        )}
                       </div>
                     ) : (
                       <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -250,7 +342,7 @@ export default function DashboardPage() {
                   disabled={isStreaming}
                 />
                 <Button type="submit" disabled={isStreaming || !input.trim()}>
-                  {isStreaming ? "..." : "Send"}
+                  {isStreaming ? `${elapsedTime}s...` : "Send"}
                 </Button>
               </form>
             </div>
