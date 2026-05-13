@@ -87,19 +87,23 @@ class Inference:
         tools = data.get("tools")
         tool_choice = data.get("tool_choice")
 
-        oai_payload = {
+        # Use Ollama native API with think:false for fast responses
+        ollama_payload = {
             "model": MODEL_NAME,
             "messages": messages,
             "stream": bool(stream),
-            "temperature": temperature,
-            "max_tokens": max_tokens,
+            "think": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            },
         }
         if tools:
-            oai_payload["tools"] = tools
+            ollama_payload["tools"] = tools
         if tool_choice:
-            oai_payload["tool_choice"] = tool_choice
+            ollama_payload["tool_choice"] = tool_choice
 
-        payload_bytes = json.dumps(oai_payload).encode()
+        payload_bytes = json.dumps(ollama_payload).encode()
 
         if stream:
             return self._stream_response(payload_bytes)
@@ -107,12 +111,12 @@ class Inference:
         return self._non_stream_response(payload_bytes)
 
     def _stream_response(self, payload_bytes):
-        """Stream SSE from Ollama to the client."""
+        """Stream from Ollama /api/chat, convert NDJSON to SSE."""
         from fastapi.responses import StreamingResponse
 
         conn = http.client.HTTPConnection("localhost", 11434, timeout=300)
         conn.request(
-            "POST", "/v1/chat/completions",
+            "POST", "/api/chat",
             body=payload_bytes,
             headers={"Content-Type": "application/json"},
         )
@@ -120,11 +124,77 @@ class Inference:
 
         def generate():
             try:
+                chunk_id = f"chatcmpl-{int(time.time())}"
                 while True:
                     line = resp.readline()
                     if not line:
                         break
-                    yield line
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                        msg = obj.get("message", {})
+                        content = msg.get("content", "")
+                        tool_calls = msg.get("tool_calls")
+                        done = obj.get("done", False)
+
+                        # Strip any residual think tags
+                        if content:
+                            content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+                            if not content and not done:
+                                continue
+
+                        if done:
+                            # Final chunk
+                            finish = "tool_calls" if tool_calls else "stop"
+                            done_chunk = {
+                                "id": chunk_id,
+                                "object": "chat.completion.chunk",
+                                "model": MODEL_NAME,
+                                "choices": [{
+                                    "index": 0,
+                                    "delta": {},
+                                    "finish_reason": finish,
+                                }],
+                            }
+                            yield f"data: {json.dumps(done_chunk)}\n\n"
+                            yield "data: [DONE]\n\n"
+                            break
+
+                        # Content chunk
+                        delta = {}
+                        if content:
+                            delta["content"] = content
+                        if tool_calls:
+                            # Convert Ollama tool_calls to OpenAI format
+                            oai_tcs = []
+                            for i, tc in enumerate(tool_calls):
+                                fn = tc.get("function", {})
+                                oai_tcs.append({
+                                    "id": f"call_{i}",
+                                    "type": "function",
+                                    "function": {
+                                        "name": fn.get("name", ""),
+                                        "arguments": json.dumps(fn.get("arguments", {})),
+                                    },
+                                })
+                            delta["tool_calls"] = oai_tcs
+
+                        if delta:
+                            sse_chunk = {
+                                "id": chunk_id,
+                                "object": "chat.completion.chunk",
+                                "model": MODEL_NAME,
+                                "choices": [{
+                                    "index": 0,
+                                    "delta": delta,
+                                    "finish_reason": None,
+                                }],
+                            }
+                            yield f"data: {json.dumps(sse_chunk)}\n\n"
+                    except json.JSONDecodeError:
+                        continue
             finally:
                 conn.close()
 
@@ -137,7 +207,7 @@ class Inference:
     def _non_stream_response(self, payload_bytes):
         """Non-streaming JSON response from Ollama."""
         req = urllib.request.Request(
-            "http://localhost:11434/v1/chat/completions",
+            "http://localhost:11434/api/chat",
             data=payload_bytes,
             headers={"Content-Type": "application/json"},
         )
@@ -145,7 +215,7 @@ class Inference:
         resp = urllib.request.urlopen(req, timeout=300)
         result = json.loads(resp.read())
 
-        msg = result.get("choices", [{}])[0].get("message", {})
+        msg = result.get("message", {})
         raw_content = msg.get("content", "")
         tool_calls = msg.get("tool_calls")
 
@@ -154,12 +224,23 @@ class Inference:
 
         assistant_message = {"role": "assistant", "content": content}
         if tool_calls:
-            assistant_message["tool_calls"] = tool_calls
+            oai_tcs = []
+            for i, tc in enumerate(tool_calls):
+                fn = tc.get("function", {})
+                oai_tcs.append({
+                    "id": f"call_{i}",
+                    "type": "function",
+                    "function": {
+                        "name": fn.get("name", ""),
+                        "arguments": json.dumps(fn.get("arguments", {})),
+                    },
+                })
+            assistant_message["tool_calls"] = oai_tcs
 
         finish_reason = "tool_calls" if tool_calls else "stop"
 
         return {
-            "id": result.get("id", "chatcmpl-modal"),
+            "id": f"chatcmpl-{int(time.time())}",
             "object": "chat.completion",
             "model": MODEL_NAME,
             "choices": [{
@@ -167,11 +248,14 @@ class Inference:
                 "message": assistant_message,
                 "finish_reason": finish_reason,
             }],
-            "usage": result.get("usage", {
-                "prompt_tokens": 0,
-                "completion_tokens": 0,
-                "total_tokens": 0,
-            }),
+            "usage": {
+                "prompt_tokens": result.get("prompt_eval_count", 0),
+                "completion_tokens": result.get("eval_count", 0),
+                "total_tokens": (
+                    result.get("prompt_eval_count", 0) +
+                    result.get("eval_count", 0)
+                ),
+            },
         }
 
     @modal.fastapi_endpoint(method="GET")
