@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [model, setModel] = useState("yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality:latest");
+  const [model, setModel] = useState("nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull:Q2_K_MTX");
   const [models, setModels] = useState<Array<{ id: string; isDefault: boolean }>>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [tab, setTab] = useState<TabType>("chat");
@@ -183,7 +183,7 @@ export default function DashboardPage() {
                 ))
               ) : (
                 <>
-                  <option value="yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality:latest">Qwen3.6-35B Claude Opus Distilled</option>
+                  <option value="nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull:Q2_K_MTX">Qwen3.6-35B Claude Opus 4.7 (Q2_K)</option>
                 </>
               )}
             </select>

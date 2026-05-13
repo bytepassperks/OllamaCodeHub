@@ -21,14 +21,14 @@ async function main() {
   });
 
   await prisma.ollamaModel.upsert({
-    where: { name: "yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality" },
+    where: { name: "nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull" },
     update: {},
     create: {
-      name: "yanjia/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-APEX-I-Quality",
-      tag: "latest",
+      name: "nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull",
+      tag: "Q2_K_MTX",
       isDefault: true,
       isActive: true,
-      sizeGb: 23,
+      sizeGb: 13,
     },
   });
 
