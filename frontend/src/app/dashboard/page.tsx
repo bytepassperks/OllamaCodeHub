@@ -341,6 +341,14 @@ export default function DashboardPage() {
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  onInput={(e) => {
+                    const val = (e.target as HTMLInputElement).value;
+                    if (val !== input) setInput(val);
+                  }}
+                  onKeyUp={(e) => {
+                    const val = (e.target as HTMLInputElement).value;
+                    if (val !== input) setInput(val);
+                  }}
                   placeholder="Write a React component that..."
                   className="flex-1"
                   disabled={isStreaming}
