@@ -26,10 +26,13 @@ export default async function chatRoutes(fastify) {
 
       if (stream) {
         const response = await chatCompletion(ollamaModel, messages, true);
+        const origin = request.headers.origin || "*";
         reply.raw.writeHead(200, {
           "Content-Type": "text/event-stream",
           "Cache-Control": "no-cache",
           Connection: "keep-alive",
+          "Access-Control-Allow-Origin": origin,
+          "Access-Control-Allow-Credentials": "true",
         });
 
         const reader = response.body.getReader();
