@@ -28,6 +28,11 @@ await fastify.register(cookie);
 await fastify.register(rateLimit, {
   max: 200,
   timeWindow: "1 minute",
+  keyGenerator: (request) => request.ip,
+  skip: (request) => {
+    // Admins have no rate limits
+    return request.user?.role === "ADMIN";
+  },
 });
 
 // API logging middleware

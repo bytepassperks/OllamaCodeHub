@@ -10,57 +10,62 @@ Open VS Code and install the [Continue extension](https://marketplace.visualstud
 ext install Continue.continue
 ```
 
-### Step 2: Configure Continue
+### Step 2: Get Your Config (Auto-Generated)
 
-Open Continue config: `Ctrl+Shift+P` → "Continue: Open config.json"
+1. Log in to [OllamaCodeHub](https://ollamacodehub.onrender.com/login)
+2. Click **VS Code Setup** in the navigation bar
+3. Your configuration JSON is auto-generated with your API token already embedded
+4. Click **Copy** to copy it to your clipboard
 
-Replace with this configuration:
+### Step 3: Configure Continue
+
+1. Open VS Code
+2. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
+3. Type `Continue: Open config.json` and press Enter
+4. Replace the entire file contents with the config you copied from Step 2
+5. Save the file
+
+Your config will look like this (with your real token filled in):
 
 ```json
 {
   "models": [
     {
-      "title": "OllamaCodeHub — Qwen3-Coder 30B",
+      "title": "OllamaCodeHub — qwen2.5-coder:7b",
       "provider": "openai",
-      "model": "qwen3-coder:30b",
-      "apiBase": "https://YOUR-RAILWAY-BACKEND-URL/v1",
-      "apiKey": "YOUR-CLERK-JWT-TOKEN",
+      "model": "qwen2.5-coder:7b",
+      "apiBase": "https://backend-production-57447.up.railway.app/v1",
+      "apiKey": "YOUR-TOKEN-AUTO-FILLED",
       "contextLength": 32768
-    },
-    {
-      "title": "OllamaCodeHub — CodeLlama 13B",
-      "provider": "openai",
-      "model": "codellama:13b",
-      "apiBase": "https://YOUR-RAILWAY-BACKEND-URL/v1",
-      "apiKey": "YOUR-CLERK-JWT-TOKEN",
-      "contextLength": 16384
     }
   ],
   "tabAutocompleteModel": {
     "title": "OllamaCodeHub Autocomplete",
     "provider": "openai",
-    "model": "qwen3-coder:30b",
-    "apiBase": "https://YOUR-RAILWAY-BACKEND-URL/v1",
-    "apiKey": "YOUR-CLERK-JWT-TOKEN"
+    "model": "qwen2.5-coder:7b",
+    "apiBase": "https://backend-production-57447.up.railway.app/v1",
+    "apiKey": "YOUR-TOKEN-AUTO-FILLED"
   }
 }
 ```
 
-### Step 3: Get Your API Token
-
-1. Log in to the OllamaCodeHub dashboard
-2. Open browser dev tools (F12)
-3. In the console, run: `await window.Clerk.session.getToken()`
-4. Copy the token and replace `YOUR-CLERK-JWT-TOKEN` in the config
-
 ### Step 4: Start Coding!
 
-- **Chat**: Use Continue's sidebar chat to ask coding questions
-- **Autocomplete**: Start typing and get AI suggestions
+- **Chat**: Use Continue's sidebar chat (`Ctrl+L`) to ask coding questions
+- **Autocomplete**: Start typing and get AI-powered code suggestions
 - **Inline Edit**: Select code and use `Ctrl+I` for inline AI edits
+- **Explain Code**: Select code, right-click → Continue → Explain
+
+### Token Renewal
+
+Your API token expires after 7 days. To renew:
+1. Go to [VS Code Setup](https://ollamacodehub.onrender.com/vscode-setup)
+2. Copy the fresh config (new token auto-generated on each visit)
+3. Paste into Continue's config.json
 
 ### Troubleshooting
 
-- **Connection refused**: Check that your Railway backend is running
-- **401 Unauthorized**: Your JWT token may have expired — regenerate it
-- **Slow responses**: The first request may take longer as the model loads
+- **Connection refused**: Check that the backend is running at https://backend-production-57447.up.railway.app/health
+- **401 Unauthorized**: Your JWT token may have expired — visit the VS Code Setup page to get a fresh one
+- **Slow responses**: First request after idle period may take 5-10s as the model warms up. Subsequent responses are faster.
+- **Autocomplete not working**: Make sure `tabAutocompleteModel` is set in your config. You may need to restart VS Code after changing config.
