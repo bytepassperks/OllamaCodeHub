@@ -15,6 +15,7 @@ async function modalChatCompletion(model, messages, stream, tools, toolChoice) {
     messages,
     temperature: 0.7,
     max_tokens: 4096,
+    stream: !!stream,
   };
   if (tools) payload.tools = tools;
   if (toolChoice) payload.tool_choice = toolChoice;
@@ -30,74 +31,12 @@ async function modalChatCompletion(model, messages, stream, tools, toolChoice) {
     throw new Error(`Modal inference error ${response.status}: ${err}`);
   }
 
-  const result = await response.json();
-
   if (stream) {
-    const content = result.choices?.[0]?.message?.content || "";
-    const toolCalls = result.choices?.[0]?.message?.tool_calls;
-    const sseStream = simulateSSEStream(content, model, toolCalls);
-    return new Response(sseStream, {
-      headers: { "Content-Type": "text/event-stream" },
-    });
+    // Modal now returns a real SSE stream — pipe it through directly
+    return response;
   }
 
-  return result;
-}
-
-function simulateSSEStream(content, model, toolCalls) {
-  const encoder = new TextEncoder();
-  const words = content.split(/(\s+)/);
-  let index = 0;
-  let sentToolCalls = false;
-
-  return new ReadableStream({
-    pull(controller) {
-      if (index < words.length) {
-        const batchSize = Math.min(3, words.length - index);
-        const batch = words.slice(index, index + batchSize).join("");
-        index += batchSize;
-
-        const chunk = {
-          id: "chatcmpl-modal",
-          object: "chat.completion.chunk",
-          model,
-          choices: [{
-            index: 0,
-            delta: { content: batch },
-            finish_reason: null,
-          }],
-        };
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-      } else if (toolCalls && !sentToolCalls) {
-        sentToolCalls = true;
-        const chunk = {
-          id: "chatcmpl-modal",
-          object: "chat.completion.chunk",
-          model,
-          choices: [{
-            index: 0,
-            delta: { tool_calls: toolCalls },
-            finish_reason: "tool_calls",
-          }],
-        };
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-      } else {
-        const doneChunk = {
-          id: "chatcmpl-modal",
-          object: "chat.completion.chunk",
-          model,
-          choices: [{
-            index: 0,
-            delta: {},
-            finish_reason: toolCalls ? "tool_calls" : "stop",
-          }],
-        };
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(doneChunk)}\n\n`));
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-        controller.close();
-      }
-    },
-  });
+  return response.json();
 }
 
 async function ollamaChatCompletion(model, messages, stream, tools, toolChoice) {

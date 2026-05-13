@@ -38,24 +38,60 @@ export default async function chatRoutes(fastify) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullResponse = "";
+        let inThink = false;
 
         try {
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
             const chunk = decoder.decode(value, { stream: true });
-            reply.raw.write(chunk);
 
-            try {
-              const lines = chunk.split("\n").filter((l) => l.startsWith("data: "));
-              for (const line of lines) {
-                const data = JSON.parse(line.replace("data: ", ""));
-                if (data.choices?.[0]?.delta?.content) {
-                  fullResponse += data.choices[0].delta.content;
-                }
+            // Process each SSE line, stripping <think> content
+            const lines = chunk.split("\n");
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) {
+                reply.raw.write(line + "\n");
+                continue;
               }
-            } catch {
-              /* partial JSON chunk */
+
+              if (line.trim() === "data: [DONE]") {
+                reply.raw.write(line + "\n");
+                continue;
+              }
+
+              try {
+                const data = JSON.parse(line.slice(6));
+                const delta = data.choices?.[0]?.delta;
+                const content = delta?.content || "";
+
+                if (!content) {
+                  reply.raw.write(line + "\n");
+                  continue;
+                }
+
+                // Handle <think> tag filtering
+                let filtered = content;
+
+                if (filtered.includes("<think>")) {
+                  inThink = true;
+                  filtered = filtered.split("<think>")[0];
+                }
+                if (filtered.includes("</think>")) {
+                  inThink = false;
+                  filtered = filtered.split("</think>").pop();
+                }
+                if (inThink) {
+                  continue; // Skip think content entirely
+                }
+
+                if (filtered) {
+                  data.choices[0].delta.content = filtered;
+                  reply.raw.write("data: " + JSON.stringify(data) + "\n");
+                  fullResponse += filtered;
+                }
+              } catch {
+                reply.raw.write(line + "\n");
+              }
             }
           }
         } finally {
@@ -152,12 +188,12 @@ export default async function chatRoutes(fastify) {
       const query = await prisma.query.findFirst({
         where: { id: request.params.queryId, userId: request.user.id },
       });
-      if (!query) return reply.code(404).send({ error: "Not found" });
-
+      if (!query) return reply.code(404).send({ error: "Query not found" });
       return {
-        model: query.model,
         prompt: query.prompt,
         response: query.response,
+        model: query.model,
+        tokens: query.tokens,
         createdAt: query.createdAt,
       };
     }

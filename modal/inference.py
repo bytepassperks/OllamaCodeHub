@@ -10,6 +10,7 @@ import time
 import os
 import json
 import re
+import http.client
 import urllib.request
 
 app = modal.App("ollamacodehub-inference")
@@ -78,32 +79,66 @@ class Inference:
 
     @modal.fastapi_endpoint(method="POST")
     def chat(self, data: dict):
-        """OpenAI-compatible /v1/chat/completions endpoint with tool calling."""
+        """OpenAI-compatible /v1/chat/completions with streaming support."""
         messages = data.get("messages", [])
         temperature = data.get("temperature", 0.7)
         max_tokens = data.get("max_tokens", 4096)
+        stream = data.get("stream", False)
         tools = data.get("tools")
         tool_choice = data.get("tool_choice")
 
-        # Use OpenAI-compatible endpoint for better tool support
         oai_payload = {
             "model": MODEL_NAME,
             "messages": messages,
-            "stream": False,
+            "stream": bool(stream),
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
-
         if tools:
             oai_payload["tools"] = tools
         if tool_choice:
             oai_payload["tool_choice"] = tool_choice
 
-        payload = json.dumps(oai_payload).encode()
+        payload_bytes = json.dumps(oai_payload).encode()
 
+        if stream:
+            return self._stream_response(payload_bytes)
+
+        return self._non_stream_response(payload_bytes)
+
+    def _stream_response(self, payload_bytes):
+        """Stream SSE from Ollama to the client."""
+        from fastapi.responses import StreamingResponse
+
+        conn = http.client.HTTPConnection("localhost", 11434, timeout=300)
+        conn.request(
+            "POST", "/v1/chat/completions",
+            body=payload_bytes,
+            headers={"Content-Type": "application/json"},
+        )
+        resp = conn.getresponse()
+
+        def generate():
+            try:
+                while True:
+                    line = resp.readline()
+                    if not line:
+                        break
+                    yield line
+            finally:
+                conn.close()
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    def _non_stream_response(self, payload_bytes):
+        """Non-streaming JSON response from Ollama."""
         req = urllib.request.Request(
             "http://localhost:11434/v1/chat/completions",
-            data=payload,
+            data=payload_bytes,
             headers={"Content-Type": "application/json"},
         )
 
@@ -114,7 +149,7 @@ class Inference:
         raw_content = msg.get("content", "")
         tool_calls = msg.get("tool_calls")
 
-        # Strip <think>...</think> blocks from output for cleaner responses
+        # Strip <think>...</think> blocks
         content = re.sub(r'<think>.*?</think>\s*', '', raw_content, flags=re.DOTALL).strip()
 
         assistant_message = {"role": "assistant", "content": content}
