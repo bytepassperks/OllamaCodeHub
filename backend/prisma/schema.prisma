@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  PRO
+  ADMIN
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String?
+  role            Role      @default(USER)
+  passwordHash    String
+  queriesUsed     Int       @default(0)
+  queriesResetAt  DateTime  @default(now())
+  banned          Boolean   @default(false)
+  suspendedUntil  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  queries         Query[]
+  apiLogs         ApiLog[]
+}
+
+model Query {
+  id          String   @id @default(cuid())
+  userId      String
+  model       String
+  prompt      String
+  response    String
+  tokens      Int      @default(0)
+  durationMs  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model OllamaModel {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  tag       String   @default("latest")
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  sizeGb    Float    @default(0)
+  createdAt DateTime @default(now())
+}
+
+model ApiLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  method     String
+  path       String
+  statusCode Int
+  durationMs Int      @default(0)
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
+model Analytics {
+  id             String   @id @default(cuid())
+  date           DateTime @unique @db.Date
+  totalQueries   Int      @default(0)
+  totalUsers     Int      @default(0)
+  activeUsers    Int      @default(0)
+  totalTokens    BigInt   @default(0)
+  avgResponseMs  Float    @default(0)
+}
