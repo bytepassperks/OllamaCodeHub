@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [model, setModel] = useState("qwen2.5-coder:3b");
+  const [model, setModel] = useState("nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull");
   const [models, setModels] = useState<Array<{ id: string; isDefault: boolean }>>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isThinking, setIsThinking] = useState(false);

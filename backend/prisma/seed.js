@@ -20,6 +20,11 @@ async function main() {
     },
   });
 
+  // Remove old models
+  await prisma.ollamaModel.deleteMany({
+    where: { name: { not: "nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull" } },
+  });
+
   await prisma.ollamaModel.upsert({
     where: { name: "nutboy02/Qwen3.6-35B-A3B-Claude-4.7-Opus-abliterated-uncenfull" },
     update: { tag: "Q2_K_MTX", isDefault: true, isActive: true, sizeGb: 13.0 },
